@@ -26,19 +26,31 @@ class Chatwork extends Adapter
 
     bot = new ChatworkStreaming(options, @robot)
 
-    for roomId in bot.rooms
-      bot.Room(roomId).Messages().listen()
+    bot.Me (err, json) =>
+      if err?
+        throw new Error "Failed to get account id: #{err}"
+        process.exit 1
 
-    bot.on 'message', (roomId, id, account, body, sendAt, updatedAt) =>
-      user = @robot.brain.userForId account.account_id,
-        name: account.name
-        avatarImageUrl: account.avatar_image_url
-        room: roomId
-      @receive new TextMessage user, body, id
+      bot.account_id = json.account_id
+      for roomId in bot.rooms
+        bot.Room(roomId).Messages().listen()
 
-    @bot = bot
+      bot.on 'message', (roomId, id, account, body, sendAt, updatedAt) =>
+        msg = body
+        regs = [
+          "\\[To:#{bot.account_id}\\].*?\\n",
+          "\\[rp aid=#{bot.account_id} to=[0-9\\-]*\\].*?\\n"
+        ]
+        for reg in regs then msg = msg.replace new RegExp(reg), "#{@robot.name} "
+        user = @robot.brain.userForId account.account_id,
+          name: account.name
+          avatarImageUrl: account.avatar_image_url
+          room: roomId
+        @receive new TextMessage user, msg, id
 
-    @emit 'connected'
+      @bot = bot
+
+      @emit 'connected'
 
 exports.use = (robot) ->
   new Chatwork robot
@@ -242,4 +254,3 @@ class ChatworkStreaming extends EventEmitter
 
     request.on "error", (err) ->
       logger.error "Chatwork request error: #{err}"
-
