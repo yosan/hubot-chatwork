@@ -1,4 +1,4 @@
-hubot-chatwork
+hubot-chatwork-test
 ==============
 
 A Hubot adapter for chatwork.
